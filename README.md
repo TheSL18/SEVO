@@ -49,7 +49,7 @@ sudo apt update && sudo apt install bind9-host netcat-openbsd coreutils bc
 
 ### Instalación Rápida
 ```bash
-git clone https://github.com/tuuser/sevo.git
+git clone https://condorcs.net/mrhacker/SEVO.git
 cd sevo
 chmod +x sevo
 ./sevo --version
@@ -195,5 +195,5 @@ Este proyecto está bajo la Licencia MIT.
 
 ---
 
-⚡ Desarrollado con ❤️ por la comunidad OSINT
+⚡ Desarrollado con ❤️ por Kevin Muñoz <Mr.Hacker>
 
