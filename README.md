@@ -1,6 +1,6 @@
-# 🕵️‍♂️ SEVO - Security Email Validator OSINT v1.0.0
+# 🕵️‍♂️ SEVO - Security Email Validator OSINT v1.1.0
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Category](https://img.shields.io/badge/category-OSINT-orange.svg)
 ![OPSEC](https://img.shields.io/badge/OPSEC-friendly-green.svg)
@@ -50,7 +50,7 @@ sudo apt update && sudo apt install bind9-host netcat-openbsd coreutils bc
 ### Instalación Rápida
 ```bash
 git clone https://condorcs.net/mrhacker/SEVO.git
-cd sevo
+cd SEVO
 chmod +x sevo
 ./sevo --version
 ```
