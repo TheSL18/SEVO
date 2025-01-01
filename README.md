@@ -1,65 +1,70 @@
-# 🕵️‍♂️ SEVO - Security Email Validator OSINT v1.1.0
+# 🕵️‍♂️ SEVO - Security Email Validator OSINT v2.0.0
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Python](https://img.shields.io/badge/python-3.7+-yellow.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Category](https://img.shields.io/badge/category-OSINT-orange.svg)
 ![OPSEC](https://img.shields.io/badge/OPSEC-friendly-green.svg)
 
-Una potente herramienta OSINT diseñada para la verificación, análisis de seguridad y reconocimiento de direcciones de correo electrónico. Ideal para investigadores de seguridad, analistas OSINT, profesionales de ciberseguridad y entusiastas del Bug Bounty.
+Una potente herramienta OSINT diseñada para la verificación, análisis de seguridad y reconocimiento de direcciones de correo electrónico. Reescrita completamente en Python para mayor flexibilidad y mantenibilidad. Ideal para investigadores de seguridad, analistas OSINT, profesionales de ciberseguridad y entusiastas del Bug Bounty.
 
 ## 📋 Características Principales
 
 ### Verificación de Correos
-- Análisis sintáctico avanzado
-- Verificación de registros MX
+- Análisis sintáctico avanzado con expresiones regulares
+- Verificación asíncrona de registros MX
 - Validación SMTP en tiempo real
 - Detección de correos inexistentes
-- Análisis de respuestas del servidor
+- Análisis detallado de respuestas del servidor
+- Soporte para conexiones seguras
 
 ### Análisis de Seguridad
-- Puntuación de seguridad (0-100)
-- Detección de SPF y política
-- Análisis DMARC y nivel de aplicación
-- Verificación de DKIM
-- Detección de MTA-STS
-- Análisis TLSRPT
+- Sistema de puntuación de seguridad mejorado (0-100)
+- Detección y análisis avanzado de SPF
+- Análisis DMARC con evaluación de políticas
+- Verificación multi-selector de DKIM
+- Detección de MTA-STS y TLSRPT
 - Verificación DNSSEC
-- Evaluación de spoofing posible
+- Análisis detallado de posibilidades de spoofing
+- Evaluación de configuraciones de seguridad
 
-### Características OSINT
-- Fingerprinting de servidores
-- Análisis de infraestructura
-- Detección de protecciones
-- Modo sigiloso para OPSEC
-- Análisis detallado en modo verbose
+### Características OSINT & OPSEC
+- Fingerprinting avanzado de servidores
+- Análisis de infraestructura de correo
+- Detección de protecciones y vulnerabilidades
+- Modo sigiloso mejorado para OPSEC
+- Sistema de logging detallado
+- Soporte para proxies/VPN
 
 ## 🚀 Instalación
 
 ### Requisitos del Sistema
+- Python 3.7+
+- pip (gestor de paquetes de Python)
+
+### Dependencias Python
 ```bash
-# Arch Linux
-sudo pacman -S bind-tools openbsd-netcat coreutils bc
-
-# Debian/Ubuntu
-sudo apt install bind9-host netcat coreutils bc
-
-# Kali Linux
-sudo apt update && sudo apt install bind9-host netcat-openbsd coreutils bc
+pip install -r requirements.txt
 ```
+
+Las dependencias principales incluyen:
+- dnspython
+- rich
+- asyncio
 
 ### Instalación Rápida
 ```bash
 git clone https://condorcs.net/mrhacker/SEVO.git
 cd SEVO
-chmod +x sevo
-./sevo --version
+pip install -r requirements.txt
+python sevo.py --version
 ```
 
 ## 💡 Uso
 
 ### Sintaxis Básica
 ```bash
-./sevo [opciones] <email>
+python sevo.py [opciones] <email>
 ```
 
 ### Opciones Disponibles
@@ -74,21 +79,21 @@ chmod +x sevo
 ### Ejemplos de Uso
 ```bash
 # Verificación básica
-./sevo usuario@dominio.com
+python sevo.py usuario@dominio.com
 
 # Análisis detallado con información de seguridad
-./sevo -v usuario@dominio.com
+python sevo.py -v usuario@dominio.com
 
 # Modo sigiloso con delay de 2 segundos
-./sevo -s -d 2 usuario@dominio.com
+python sevo.py -s -d 2 usuario@dominio.com
 ```
 
 ## 📊 Interpretación de Resultados
 
 ### Puntuación de Seguridad
-- **80-100**: Excelente protección
-- **50-79**: Protección moderada
-- **0-49**: Protección débil
+- **80-100**: Protección excelente (SPF estricto, DMARC enforced, DKIM)
+- **50-79**: Protección moderada (algunas medidas implementadas)
+- **0-49**: Protección débil (configuraciones ausentes o permisivas)
 
 ### Indicadores de Estado
 | Símbolo | Significado |
@@ -106,12 +111,11 @@ chmod +x sevo
 ║ 📊 Puntuación de Seguridad: 95/100
 ║
 ║ ✅ Características de Seguridad Detectadas:
-║    - SPF
-║    - SPF_STRICT
-║    - DMARC
-║    - DMARC_ENFORCED
-║    - DKIM
-║    - TLSRPT
+║    - SPF (Strict)
+║    - DMARC (Enforced)
+║    - DKIM (Valid)
+║    - TLSRPT (Enabled)
+║    - DNSSEC (Active)
 ║
 ║ ⚠️  Vulnerabilidades Detectadas:
 ║    - MTA-STS no configurado
@@ -119,75 +123,52 @@ chmod +x sevo
 ║ 🎯 Estado de Protecciones:
 ║    - SPF Estricto: ✅
 ║    - DMARC Enforced: ✅
-║    - Spoofing Posible: ✅ NO
+║    - Spoofing Posible: ❌ NO
 ╚════════════════════════════════════════════════════════════════
 ```
 
-## 🛡️ Características de Seguridad Analizadas
+## 🛡️ Métodos de Validación
 
-### SPF (Sender Policy Framework)
-- Presencia de registro SPF
-- Política (-all, ~all, ?all, +all)
-- Nivel de restricción
+### Validación de Correo
+- Verificación de sintaxis RFC 5322
+- Resolución DNS asíncrona
+- Validación SMTP con soporte TLS
+- Análisis de respuestas del servidor
+- Detección de políticas anti-spam
 
-### DMARC (Domain-based Message Authentication)
-- Presencia de registro DMARC
-- Política (reject, quarantine, none)
-- Porcentaje de aplicación
-- Nivel de enforcement
-
-### DKIM (DomainKeys Identified Mail)
-- Verificación de selectores comunes
-- Detección de claves públicas
-- Estado de implementación
-
-### Protecciones Adicionales
-- MTA-STS para seguridad de transporte
-- TLSRPT para reportes TLS
-- DNSSEC para seguridad DNS
-
-## 🎯 Casos de Uso
-
-### Investigaciones de Seguridad
-- Validación de correos sospechosos
-- Análisis de configuraciones
-- Detección de vulnerabilidades
-
-### Auditorías
-- Evaluación de seguridad de correo
-- Verificación de configuraciones
-- Identificación de riesgos
-
-### Bug Bounty
-- Reconocimiento de objetivos
-- Verificación de correos
-- Análisis de infraestructura
+### Análisis de Seguridad
+- Verificación exhaustiva de SPF
+- Análisis de políticas DMARC
+- Verificación multi-selector DKIM
+- Evaluación de seguridad de transporte
+- Análisis de vectores de spoofing
 
 ## ⚠️ Consideraciones OPSEC
 
-- Utilizar con VPN/Proxy cuando sea necesario
-- Activar modo sigiloso para reconocimiento discreto
-- Usar delays apropiados para evitar detección
-- Limitar frecuencia de consultas
-- Documentar hallazgos de forma segura
+- Utilizar siempre a través de VPN/Proxy
+- Activar modo sigiloso para reconocimiento
+- Implementar delays apropiados
+- Respetar límites de consultas
+- Mantener logs seguros
 
 ## 📝 Notas Legales
 
-Esta herramienta está diseñada para uso ético y profesional en:
+Esta herramienta está diseñada exclusivamente para uso ético y profesional en:
 - Pruebas autorizadas
 - Investigaciones legítimas
 - Auditorías de seguridad
 - Análisis de sistemas propios
 
-El uso indebido puede estar sujeto a restricciones legales.
+El uso indebido está prohibido y puede estar sujeto a consecuencias legales.
 
 ## 🤝 Contribución
 
 Las contribuciones son bienvenidas:
-- Reporte de bugs
-- Nuevas características
-- Mejoras de documentación
-- Optimizaciones de código
+1. Fork del repositorio
+2. Crear rama de características
+3. Commit de cambios
+4. Push a la rama
+5. Crear Pull Request
 
 ## 📜 Licencia
 
@@ -195,5 +176,4 @@ Este proyecto está bajo la Licencia MIT.
 
 ---
 
-⚡ Desarrollado con ❤️ por Kevin Muñoz <Mr.Hacker>
-
+⚡ Desarrollado con ❤️ por Kevin Muñoz (@MrHacker)
