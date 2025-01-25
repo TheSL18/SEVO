@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.table import Table
 from rich import print as rprint
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 
 @dataclass
 class SecurityAnalysis:
@@ -61,9 +61,11 @@ class EmailValidator:
         spf_strict = False
         dmarc_enforced = False
         spoofable = False
+        spf_strength = 0
+        dmarc_strength = 0
 
         try:
-            # Check SPF
+            # Verificar SPF
             try:
                 answers = dns.resolver.resolve(domain, 'TXT')
                 spf_record = next((str(record) for record in answers 
@@ -73,19 +75,34 @@ class EmailValidator:
                     security_features.append("SPF")
                     security_score += 20
 
+                    # Analizar mecanismos SPF
+                    mechanisms = re.findall(r'[\+\-\~\?]?(ip4|ip6|a|mx|ptr|exists|include|all)[:\/]?[^\s]*', spf_record)
+
                     if '-all' in spf_record:
                         security_features.append("SPF_STRICT")
                         spf_strict = True
+                        spf_strength = 3
                         security_score += 15
                     elif '~all' in spf_record:
                         security_features.append("SPF_SOFT_FAIL")
                         vulnerabilities.append("SPF no es estricto (usa ~all)")
+                        spf_strength = 2
                         security_score += 10
                     elif '?all' in spf_record:
                         vulnerabilities.append("SPF en modo neutral")
+                        spf_strength = 1
                         security_score += 5
                     elif '+all' in spf_record:
                         vulnerabilities.append("SPF permite cualquier remitente")
+                        spf_strength = 0
+                        spoofable = True
+
+                    if len(mechanisms) < 2:
+                        vulnerabilities.append("SPF: Pocas reglas definidas")
+                    if 'ptr' in spf_record:
+                        vulnerabilities.append("SPF: Uso de mecanismo PTR (no recomendado)")
+                    if any(m.startswith('+') for m in mechanisms):
+                        vulnerabilities.append("SPF: Uso de modificador '+' explícito (riesgo de spoofing)")
                         spoofable = True
                 else:
                     vulnerabilities.append("No se encontró registro SPF")
@@ -93,7 +110,7 @@ class EmailValidator:
             except Exception as e:
                 vulnerabilities.append(f"Error al verificar SPF: {str(e)}")
 
-            # Check DMARC
+            # Verificar DMARC
             try:
                 answers = dns.resolver.resolve(f'_dmarc.{domain}', 'TXT')
                 dmarc_record = next((str(record) for record in answers 
@@ -103,23 +120,43 @@ class EmailValidator:
                     security_features.append("DMARC")
                     security_score += 20
 
-                    if 'p=reject' in dmarc_record:
-                        security_features.append("DMARC_ENFORCED")
-                        dmarc_enforced = True
-                        security_score += 15
-                    elif 'p=quarantine' in dmarc_record:
-                        security_features.append("DMARC_QUARANTINE")
-                        security_score += 10
-                    elif 'p=none' in dmarc_record:
-                        vulnerabilities.append("DMARC en modo monitoreo")
-                        security_score += 5
+                    # Analizar política DMARC y opciones
+                    dmarc_policy = re.search(r'p=(reject|quarantine|none)', dmarc_record)
+                    pct_match = re.search(r'pct=(\d+)', dmarc_record)
+                    rua_match = re.search(r'rua=([^\s;]+)', dmarc_record)
+                    ruf_match = re.search(r'ruf=([^\s;]+)', dmarc_record)
+
+                    if dmarc_policy:
+                        if dmarc_policy.group(1) == 'reject':
+                            security_features.append("DMARC_ENFORCED")
+                            dmarc_enforced = True
+                            dmarc_strength = 3
+                            security_score += 15
+                        elif dmarc_policy.group(1) == 'quarantine':
+                            security_features.append("DMARC_QUARANTINE")
+                            dmarc_strength = 2
+                            security_score += 10
+                        else:  # none
+                            vulnerabilities.append("DMARC en modo monitoreo")
+                            dmarc_strength = 1
+                            security_score += 5
+
+                    if not pct_match or int(pct_match.group(1)) < 100:
+                        vulnerabilities.append("DMARC: No aplicado al 100% de los mensajes")
+                        spoofable = True
+
+                    if not rua_match and not ruf_match:
+                        vulnerabilities.append("DMARC: Sin configuración de reportes")
+
+                    if not re.search(r'(adkim|aspf)=s', dmarc_record):
+                        vulnerabilities.append("DMARC: Modo de alineación relajado")
                 else:
                     vulnerabilities.append("No se encontró registro DMARC")
                     spoofable = True
             except Exception as e:
                 vulnerabilities.append(f"Error al verificar DMARC: {str(e)}")
 
-            # Check DKIM
+            # Verificar DKIM
             dkim_selectors = ['default', 'google', 'mail', 'email', 'key1', 'selector1', 'selector2']
             dkim_found = False
 
@@ -136,11 +173,28 @@ class EmailValidator:
             if not dkim_found:
                 vulnerabilities.append("No se encontró registro DKIM")
 
+            # Evaluación final de riesgo de spoofing
+            if spf_strength < 2 or dmarc_strength < 2:
+                spoofable = True
+
+            if len(vulnerabilities) > 3:
+                spoofable = True
+
+            # Verificaciones adicionales para misconfiguraciones comunes
+            try:
+                answers = dns.resolver.resolve(domain, 'A')
+                ip = str(answers[0])
+                ptr = dns.resolver.resolve_address(ip)
+                if not any(domain in str(r) for r in ptr):
+                    vulnerabilities.append("Falta de registro PTR válido")
+            except:
+                pass
+
         except Exception as e:
             vulnerabilities.append(f"Error en análisis de seguridad: {str(e)}")
 
         return SecurityAnalysis(
-                score=security_score,
+                score=min(100, security_score),
                 features=security_features,
                 vulnerabilities=vulnerabilities,
                 spf_strict=spf_strict,
@@ -168,7 +222,7 @@ class EmailValidator:
         elif 'zimbra' in server_info.lower():
             return "Zimbra"
 
-        return "Unknown Server"
+        return "Servidor Desconocido"
 
     async def validate_email(self, email: str) -> bool:
         if not re.match(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$', email):
@@ -283,10 +337,10 @@ class EmailValidator:
 
 async def main():
     parser = argparse.ArgumentParser(description='Email OSINT Validator')
-    parser.add_argument('email', help='Email to validate')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode')
-    parser.add_argument('-s', '--stealth', action='store_true', help='Stealth mode')
-    parser.add_argument('-d', '--delay', type=int, default=0, help='Delay between queries')
+    parser.add_argument('email', help='Email a validar')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Modo verbose')
+    parser.add_argument('-s', '--stealth', action='store_true', help='Modo sigiloso')
+    parser.add_argument('-d', '--delay', type=int, default=0, help='Retraso entre consultas')
     args = parser.parse_args()
 
     validator = EmailValidator(verbose=args.verbose, stealth=args.stealth, delay=args.delay)

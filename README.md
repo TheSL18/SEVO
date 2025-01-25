@@ -1,6 +1,6 @@
-# 🕵️‍♂️ SEVO - Security Email Validator OSINT v2.0.0
+# 🕵️‍♂️ SEVO - Security Email Validator OSINT v2.1.0
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.7+-yellow.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Category](https://img.shields.io/badge/category-OSINT-orange.svg)
@@ -18,15 +18,20 @@ Una potente herramienta OSINT diseñada para la verificación, análisis de segu
 - Análisis detallado de respuestas del servidor
 - Soporte para conexiones seguras
 
-### Análisis de Seguridad
-- Sistema de puntuación de seguridad mejorado (0-100)
-- Detección y análisis avanzado de SPF
-- Análisis DMARC con evaluación de políticas
+### Análisis de Seguridad Mejorado
+- Sistema de puntuación de seguridad avanzado (0-100)
+- Detección y análisis exhaustivo de SPF
+  - Evaluación de mecanismos SPF
+  - Detección de configuraciones débiles
+  - Análisis de modificadores
+- Análisis DMARC completo
+  - Verificación de porcentaje de aplicación
+  - Evaluación de políticas y modos
+  - Análisis de reportes y alineación
 - Verificación multi-selector de DKIM
-- Detección de MTA-STS y TLSRPT
-- Verificación DNSSEC
-- Análisis detallado de posibilidades de spoofing
-- Evaluación de configuraciones de seguridad
+- Análisis PTR
+- Detección mejorada de susceptibilidad a spoofing
+- Evaluación de fortaleza de configuración (SPF/DMARC)
 
 ### Características OSINT & OPSEC
 - Fingerprinting avanzado de servidores
@@ -91,9 +96,27 @@ python sevo.py -s -d 2 usuario@dominio.com
 ## 📊 Interpretación de Resultados
 
 ### Puntuación de Seguridad
-- **80-100**: Protección excelente (SPF estricto, DMARC enforced, DKIM)
+- **80-100**: Protección excelente (SPF estricto, DMARC enforced 100%, DKIM)
 - **50-79**: Protección moderada (algunas medidas implementadas)
 - **0-49**: Protección débil (configuraciones ausentes o permisivas)
+
+### Detección de Spoofing
+La herramienta analiza:
+- Fortaleza de SPF (escala 0-3)
+  - 3: Configuración estricta (-all)
+  - 2: Configuración moderada (~all)
+  - 1: Configuración débil (?all)
+  - 0: Sin protección (+all)
+- Fortaleza de DMARC (escala 0-3)
+  - 3: Reject enforced
+  - 2: Quarantine
+  - 1: Modo monitoreo
+  - 0: Sin DMARC
+- Porcentaje de aplicación DMARC
+- Configuración de reportes (RUA/RUF)
+- Modos de alineación DKIM/SPF
+- Validez de registros PTR
+- Acumulación de vulnerabilidades
 
 ### Indicadores de Estado
 | Símbolo | Significado |
@@ -118,12 +141,13 @@ python sevo.py -s -d 2 usuario@dominio.com
 ║    - DNSSEC (Active)
 ║
 ║ ⚠️  Vulnerabilidades Detectadas:
-║    - MTA-STS no configurado
+║    - DMARC no aplicado al 100%
+║    - Falta registro PTR válido
 ║
 ║ 🎯 Estado de Protecciones:
 ║    - SPF Estricto: ✅
 ║    - DMARC Enforced: ✅
-║    - Spoofing Posible: ❌ NO
+║    - Spoofing Posible: ⚠️ SÍ
 ╚════════════════════════════════════════════════════════════════
 ```
 
